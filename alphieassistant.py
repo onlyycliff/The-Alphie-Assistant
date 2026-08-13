@@ -7,14 +7,17 @@ import pytz
 
 load_dotenv()
 
+# Define a list of exit commands that will terminate the chat session
 exiting_code = ["quit", "exit", "bye", "goodbye", "stop", "end", "terminate", "close", "shutdown", "abort", "cancel", "finish", "halt", "leave", "log off", "log out", "sign out", "disconnect", "break", "pause", "suspend"]
 
+# Function to get the current time in a specified timezone
 def get_current_time(timezone: str = "America/New_York") -> str:
     """Returns the current time in the specified timezone."""
     tz = pytz.timezone(timezone)
     now = datetime.now(tz)
     return now.strftime("%Y-%m-%d %H:%M:%S")
 
+# Function that evaluates a mathematical expression
 def calculation(expression: str) -> str:
     """Evaluates a mathematical expression and returns the result."""
     try:
@@ -24,8 +27,12 @@ def calculation(expression: str) -> str:
     except Exception as e:
         return f"Error evaluating expression: {e}"
 
+
+# Initialize the GenAI client with the API key from environment
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
+
+# Create a chat session with the specified model and configuration
 chat = client.chats.create(
     model="gemini-3.6-flash",
     config=types.GenerateContentConfig(
@@ -40,9 +47,11 @@ chat = client.chats.create(
 )
 
 
-
+# Print statement to indicate that the assistant is online and ready for interaction
 print(f"Assistant online. Type 'quit' to exit.\n")
 
+
+# Main loop to interact with the user
 while True:
     user_input = input("You: ")
     if user_input.lower() in exiting_code:
