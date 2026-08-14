@@ -2,3 +2,5 @@
 ALPHIE/.env
 venv/
 .env*
+credentials.json
+token.json
