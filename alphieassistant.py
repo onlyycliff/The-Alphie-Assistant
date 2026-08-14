@@ -1,14 +1,19 @@
 import os
+import pytz
+import gmail_tool
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from datetime import datetime
-import pytz
+
 
 load_dotenv()
 
 # Define a list of exit commands that will terminate the chat session
 exiting_code = ["quit", "exit", "bye", "goodbye", "stop", "end", "terminate", "close", "shutdown", "abort", "cancel", "finish", "halt", "leave", "log off", "log out", "sign out", "disconnect", "break", "pause", "suspend"]
+
+# Initialize the Gmail service using the get_gmail_service function from gmail_tool
+service = gmail_tool.get_gmail_service()
 
 # Function to get the current time in a specified timezone
 def get_current_time(timezone: str = "America/New_York") -> str:
@@ -26,6 +31,14 @@ def calculation(expression: str) -> str:
         return str(result)
     except Exception as e:
         return f"Error evaluating expression: {e}"
+    
+def check_unread_emails() -> str:
+    """Checks for unread emails and returns a summary."""
+    if service:
+        unread_emails = gmail_tool.get_unread_emails(service)
+        return unread_emails
+    else:
+        return "Gmail service is not available."
 
 
 # Initialize the GenAI client with the API key from environment
@@ -42,7 +55,7 @@ chat = client.chats.create(
             "You know I'm a Computer Science & Engineering student building you as a long-term project."
             "Always use the tools available to you when appropriate, and if you don't know the answer, say so."
         ),
-        tools=[get_current_time, calculation]
+        tools=[get_current_time, calculation, check_unread_emails]
     )
 )
 

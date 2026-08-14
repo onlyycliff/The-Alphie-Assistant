@@ -2,3 +2,8 @@
 ALPHIE/.env
 venv/
 .env*
+credentials.json
+token.json
+__pycache__/**/*
+__pycache__ 
+__pycache__/
