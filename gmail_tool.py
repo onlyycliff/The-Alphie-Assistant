@@ -39,7 +39,32 @@ def get_gmail_service():
     except HttpError as error:
         print(f'An error occurred: {error}')
         return None
+
+def get_unread_emails(service):
+    """Get a list of unread emails."""
+    try:
+        results = service.users().messages().list(userId='me', labelIds=['INBOX'], q='is:unread').execute()
+        messages = results.get('messages', [])
         
+        if not messages:
+            return f'No unread emails found.'
+        else:
+            unread_list = []
+            for message in messages:
+                msg = service.users().messages().get(userId='me', id=message['id']).execute()
+                subject = ''
+                for header in msg['payload']['headers']:
+                    if header['name'] == 'Subject':
+                        subject = header['value']
+                        break
+                unread_list.append(subject)
+            return "\n".join(unread_list)
+            
+            
+        
+    except HttpError as error:
+        print(f'An error occurred: {error}')
+        return f'Error retrieving unread emails: {error}'
 
 if __name__ == '__main__':
     service = get_gmail_service()
