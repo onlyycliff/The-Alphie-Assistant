@@ -75,7 +75,7 @@ python alphieassistant.py
 
 A running log of nontrivial technical decisions and the reasoning behind them — this is meant to show *how* you think, not just what you built.
 
-### [Date] — Soft vs. hard tool-call forcing
+### [August 12th, 2026] — Soft vs. hard tool-call forcing
 Considered forcing tool use for math via `interactions.create` + `tool_config`, but this API is only available on the single-shot `interactions.create` endpoint, not the stateful `chats.create` session used for conversation memory. Switching would mean manually rebuilding chat history management. Chose a system-prompt instruction (soft forcing) instead — Gemini's native arithmetic is already reliable for simple cases, and the engineering cost of losing built-in history tracking outweighed the benefit of 100% enforcement for a low-stakes tool. Will revisit hard forcing for higher-stakes tools (e.g. sending emails) where reliability matters more.
 
 ### [Date] — [next decision]
