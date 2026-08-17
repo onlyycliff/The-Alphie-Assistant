@@ -14,13 +14,13 @@ Alphie is a personal AI assistant built from scratch, combining an LLM "brain" (
 
 ## Current Status
 
-**Phase:** 1 complete, Phase 2 in progress — Gmail integration done, Calendar/Outlook next
+**Phase:** 1 complete, Phase 2 in progress — Gmail and Calendar (read-only) done, Outlook pending IT, write access and web-search next
 
 | Phase | Status | Description |
 |---|---|---|
 | 0 — Foundations | ✅ Done | Python, Git, CLI fundamentals |
 | 1 — Brain | ✅ Done | Conversational agent with tool-calling (Gemini API) |
-| 2 — Hands | 🔄 In progress | Gmail (read-only) done; Calendar, Outlook, and web-search still to come |
+| 2 — Hands | 🔄 In progress | Gmail (read-only) and Calendar (read-only) done; Outlook pending UConn IT approval; web-search still to come |
 | 3 — Voice | ⬜ Not started | Local speech-to-text / text-to-speech |
 | 4 — Phone access | ⬜ Not started | Telegram bot deployment, remote access |
 | 5 — Memory & proactivity | ⬜ Not started | Semantic memory (vector DB), scheduled tasks |
@@ -35,14 +35,21 @@ Alphie is a personal AI assistant built from scratch, combining an LLM "brain" (
 **Current components:**
 - `alphieassistant.py` — main chat loop, tool declarations, and tool wrapper functions
 - `gmail_tool.py` — Gmail OAuth handling (`get_gmail_service`) and unread-email fetching (`get_unread_emails`), kept separate from the main file per single-responsibility
+- `calendar_tool.py` — Calendar OAuth handling (`get_calendar_service`) and upcoming-event fetching (`get_upcoming_events`), same structural pattern as `gmail_tool.py`
 - `.env` — local secrets (Gemini API key), not committed
-- `credentials.json` / `token.json` — Gmail OAuth client secret and stored user token, not committed
-- Tools implemented: `get_current_time`, `calculation`, `check_unread_emails`
+- `credentials.json` / `token.json` / `gcalendar_token.json` — Google OAuth client secret and per-service stored tokens, not committed
+- Tools implemented: `get_current_time`, `calculation`, `check_unread_emails`, `check_upcoming_events`
 
 **Gmail integration notes:**
 - Auth flow: Google Cloud Console project → OAuth consent screen (testing mode, self as test user) → `credentials.json` → browser consent on first run → `token.json` cached for reuse
 - `service` (the authenticated Gmail client) is created once at module level in `alphieassistant.py` and accessed by `check_unread_emails()` via closure, rather than re-authenticating on every tool call
 - Scope: `gmail.readonly` only — deliberately least-privilege, since send/reply capability introduces real side-effect risk the project isn't ready to hand an LLM yet
+
+**Calendar integration notes:**
+- Reuses the same Google Cloud project and OAuth consent screen as Gmail, with its own scope (`calendar.readonly`) and its own token file (`gcalendar_token.json`) — kept separate from Gmail's `token.json` deliberately, since sharing one token file across two scopes would silently overwrite one service's access with the other's
+- Same closure pattern as Gmail: `calendar_service` created once at module level, accessed by `check_upcoming_events()` without re-authenticating per call
+- Scope: `calendar.readonly` only — write access (creating/deleting events) intentionally deferred until a confirmation-before-write safety layer exists, since an LLM acting on a real calendar with no review step is a meaningfully bigger risk than read-only tools
+- Known duplication: `get_calendar_service()` and `get_gmail_service()` share nearly identical OAuth boilerplate. Deliberate tradeoff for now — a shared `google_auth.py` refactor is planned as its own separate branch/PR rather than bundled into either feature
 
 ---
 
@@ -52,7 +59,8 @@ Alphie is a personal AI assistant built from scratch, combining an LLM "brain" (
 - **LLM:** Google Gemini API (`google-genai` SDK)
 - **Environment management:** `venv`, `python-dotenv`
 - **Gmail integration:** Gmail API via `google-api-python-client`, `google-auth-httplib2`, `google-auth-oauthlib` (OAuth2 desktop-app flow)
-- *(add each new dependency here as it's introduced — e.g. Google Calendar API, Whisper, ChromaDB, etc.)*
+- **Calendar integration:** Google Calendar API, same auth libraries as Gmail, separate scope and token file
+- *(add each new dependency here as it's introduced — e.g. Whisper, ChromaDB, etc.)*
 
 ---
 
@@ -98,6 +106,9 @@ Attempted Outlook/Microsoft Graph API integration first, reasoning that school e
 
 ### Aug 2026 — Return type consistency across tool functions
 `get_unread_emails()` originally had inconsistent return types across its code paths (string in two branches, empty list in the error branch). Standardized all paths to return a string, since the caller (eventually the model) needs a predictable type regardless of which branch executed. Also chose to join multiple email summaries into a single newline-separated string rather than returning a raw list, anticipating Phase 3 voice output — a pre-formatted string needs less work from the model to turn into clean spoken/written language.
+
+### Aug 2026 — Deprecated datetime method broke a downstream format assumption
+While building `get_upcoming_events()`, fixed a `datetime.utcnow()` deprecation warning by switching to the timezone-aware `datetime.now(datetime.timezone.utc)`. This introduced a real bug: the old code manually appended `"Z"` to the timestamp string, which was correct for `.utcnow()` (a timezone-naive method with no offset of its own), but the timezone-aware replacement's `.isoformat()` already includes a `+00:00` offset — so the manual `"Z"` produced a malformed double-timezone timestamp (`...+00:00Z`), which the Calendar API rejected with a 400 error. Root cause took two steps to trace (an unrelated 403 from a not-yet-fully-enabled API had to be ruled out first). Lesson: fixing a deprecation warning can silently break an assumption elsewhere in the same code that depended on the old method's specific output shape — check what depends on a line before changing it, not just whether the line itself still runs.
 
 ---
 
