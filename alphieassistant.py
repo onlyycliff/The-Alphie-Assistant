@@ -1,6 +1,7 @@
 import os
 import pytz
 import gmail_tool
+import gcalendar_tool
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -14,6 +15,9 @@ exiting_code = ["quit", "exit", "bye", "goodbye", "stop", "end", "terminate", "c
 
 # Initialize the Gmail service using the get_gmail_service function from gmail_tool
 service = gmail_tool.get_gmail_service()
+
+# Initialize the Google Calendar service using the get_calendar_service function from gcalendar_tool
+calendar_service = gcalendar_tool.get_calendar_service()
 
 # Function to get the current time in a specified timezone
 def get_current_time(timezone: str = "America/New_York") -> str:
@@ -40,6 +44,14 @@ def check_unread_emails() -> str:
     else:
         return "Gmail service is not available."
 
+def check_upcoming_events() -> str:
+    """Gets upcoming events from Google Calendar and returns a summary."""
+    if calendar_service:
+        upcoming_events = gcalendar_tool.get_upcoming_events(calendar_service)
+        return upcoming_events
+    else:
+        return "Google Calendar service is not available."
+
 
 # Initialize the GenAI client with the API key from environment
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
@@ -55,7 +67,7 @@ chat = client.chats.create(
             "You know I'm a Computer Science & Engineering student building you as a long-term project."
             "Always use the tools available to you when appropriate, and if you don't know the answer, say so."
         ),
-        tools=[get_current_time, calculation, check_unread_emails]
+        tools=[get_current_time, calculation, check_unread_emails, check_upcoming_events]
     )
 )
 
