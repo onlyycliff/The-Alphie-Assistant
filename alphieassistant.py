@@ -19,6 +19,9 @@ service = gmail_tool.get_gmail_service()
 # Initialize the Google Calendar service using the get_calendar_service function from gcalendar_tool
 calendar_service = gcalendar_tool.get_calendar_service()
 
+USE_SEARCH_GROUNDING = os.getenv("USE_SEARCH_GROUNDING", "False") == "True"
+
+
 # Function to get the current time in a specified timezone
 def get_current_time(timezone: str = "America/New_York") -> str:
     """Returns the current time in the specified timezone."""
@@ -53,10 +56,20 @@ def check_upcoming_events() -> str:
         return "Google Calendar service is not available."
 
 
+
+
 # Initialize the GenAI client with the API key from environment
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
+grounding_tool = types.Tool(
+    google_search = types.GoogleSearch()
+)
 
+alphies_tools = [get_current_time, calculation, check_unread_emails, check_upcoming_events]
+
+if USE_SEARCH_GROUNDING:
+    alphies_tools.append(grounding_tool)
+    
 # Create a chat session with the specified model and configuration
 chat = client.chats.create(
     model="gemini-3.6-flash",
@@ -67,13 +80,15 @@ chat = client.chats.create(
             "You know I'm a Computer Science & Engineering student building you as a long-term project."
             "Always use the tools available to you when appropriate, and if you don't know the answer, say so."
         ),
-        tools=[get_current_time, calculation, check_unread_emails, check_upcoming_events]
+        tools=alphies_tools
     )
 )
 
 
 # Print statement to indicate that the assistant is online and ready for interaction
 print(f"Assistant online. Type 'quit' to exit.\n")
+
+print(f"{USE_SEARCH_GROUNDING}")
 
 
 # Main loop to interact with the user
