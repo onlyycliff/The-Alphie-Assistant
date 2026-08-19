@@ -1,9 +1,8 @@
-import wave
 import wavio as wv
 import numpy as np
 from pynput.keyboard import Listener as KeyboardListener
 import sounddevice as sd
-from piper import PiperVoice
+
 
 
 freq = 44100
