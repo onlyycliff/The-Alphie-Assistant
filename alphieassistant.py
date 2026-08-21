@@ -2,6 +2,8 @@ import os
 import pytz
 import gmail_tool
 import gcalendar_tool
+import whisper_tool
+import audio_recording
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -16,8 +18,12 @@ exiting_code = ["quit", "exit", "bye", "goodbye", "stop", "end", "terminate", "c
 # Initialize the Gmail service using the get_gmail_service function from gmail_tool
 service = gmail_tool.get_gmail_service()
 
+# Initialize the OpenAI whisper model using get_model function from whisper_tool
+model = whisper_tool.get_model()
+
 # Initialize the Google Calendar service using the get_calendar_service function from gcalendar_tool
 calendar_service = gcalendar_tool.get_calendar_service()
+
 
 USE_SEARCH_GROUNDING = os.getenv("USE_SEARCH_GROUNDING", "False") == "True"
 
@@ -88,14 +94,16 @@ chat = client.chats.create(
 # Print statement to indicate that the assistant is online and ready for interaction
 print(f"Assistant online. Type 'quit' to exit.\n")
 
-print(f"{USE_SEARCH_GROUNDING}")
 
 
 # Main loop to interact with the user
 while True:
-    user_input = input("You: ")
+    user_input = input(f"You:")
+    if user_input.strip() == "" or user_input.lower() == "v":
+        recorded_file = audio_recording.listen_and_record()
+        transcription = whisper_tool.transcribe_audio(model, recorded_file)
+        user_input = transcription
     if user_input.lower() in exiting_code:
-        print("Exiting the chat. Goodbye!")
         break
 
     response = chat.send_message(user_input)

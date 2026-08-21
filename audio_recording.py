@@ -1,5 +1,6 @@
 import wavio as wv
 import numpy as np
+import threading
 from pynput.keyboard import Listener as KeyboardListener
 import sounddevice as sd
 
@@ -8,9 +9,11 @@ import sounddevice as sd
 freq = 44100
 is_recording = False
 recorded_chunks = []
+event = threading.Event()
+
 
 def on_press(key):
-    global freq, duration, is_recording
+    global freq, is_recording
     try:
         if key.char == 'q' and not is_recording:
             is_recording = True
@@ -38,12 +41,20 @@ def on_release(key):
             full_record = np.concatenate(recorded_chunks)
             wv.write("output.wav", full_record, freq, sampwidth=2)
             print("Recording stopped.")
+            event.set()
     except AttributeError:
         pass
 
-    
-keyboard_listener = KeyboardListener(on_press=on_press, on_release=on_release)
 
-keyboard_listener.start()
-keyboard_listener.join()
-        
+def listen_and_record():
+    """ Starts a push-to-talk recording session and returns the audio filename once complete"""
+    istener = KeyboardListener(on_press=on_press, on_release=on_release, suppress=True)
+    istener.start()
+    event.wait()
+    event.clear()
+    return "output.wav"
+
+if __name__ == "__main__":
+    print(f"Testing and listening")
+    result = listen_and_record()
+    print(f"Got back: {result}")
